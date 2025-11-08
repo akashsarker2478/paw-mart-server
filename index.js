@@ -28,6 +28,22 @@ app.get('/', (req, res) => {
 async function run() {
   try {
     await client.connect();
+    const db = client.db('paw_db')
+    const listingsCollection = db.collection('product')
+    //post api
+    app.post('/product',async(req,res)=>{
+        const newProduct = req.body;
+        const result = await listingsCollection.insertOne(newProduct)
+        res.send(result)
+    })
+
+    //get api
+    app.get('/product',async(req,res)=>{
+        const cursor = listingsCollection.find()
+        const result = await cursor.toArray()
+        res.send(result)
+    })
+
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
