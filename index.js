@@ -2,6 +2,7 @@ const express = require('express')
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const app = express()
 const cors = require('cors');
+require("dotenv").config()
 const port =process.env.PORT||3000
 
 
@@ -9,7 +10,7 @@ const port =process.env.PORT||3000
 app.use(cors())
 app.use(express.json())
 
-const uri = "mongodb+srv://pawDB:sJ09bF4AIhx80mHi@cluster0.yh13yvx.mongodb.net/?appName=Cluster0";
+const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.yh13yvx.mongodb.net/?appName=Cluster0`;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -43,6 +44,22 @@ async function run() {
         const result = await cursor.toArray()
         res.send(result)
     })
+
+    //latest listing
+    app.get('/latest-product',async(req,res)=>{
+      const cursor = listingsCollection.find().sort({date:-1}).limit(6)
+      const result = await cursor.toArray()
+      res.send(result)
+    })
+
+    //search listing
+    app.get('/search',async(req,res)=>{
+      const search_text = req.query.search;
+      const result = await listingsCollection.find({name:{$regex:search_text,$options:'i'}}).toArray()
+      res.send(result)
+    })
+
+
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
