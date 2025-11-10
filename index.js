@@ -32,6 +32,22 @@ async function run() {
     const db = client.db('paw_db')
     const listingsCollection = db.collection('product')
     const ordersCollection = db.collection('orders')
+    const userCollection = db.collection('user')
+
+    //user
+    app.post('/user',async(req,res)=>{
+      const newUser = req.body;
+      const email = req.body.email;
+      const query ={email:email}
+      const existingUser = await userCollection.findOne(query)
+      if(existingUser){
+        res.send('user already exists do not need to insert again')
+      }
+      else{
+        const result = await userCollection.insertOne(newUser)
+        res.send(result)
+      }
+    })
     //post api
     app.post('/product',async(req,res)=>{
         const newProduct = req.body;
