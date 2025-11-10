@@ -31,6 +31,7 @@ async function run() {
     await client.connect();
     const db = client.db('paw_db')
     const listingsCollection = db.collection('product')
+    const ordersCollection = db.collection('orders')
     //post api
     app.post('/product',async(req,res)=>{
         const newProduct = req.body;
@@ -64,6 +65,25 @@ async function run() {
     app.get('/search',async(req,res)=>{
       const search_text = req.query.search;
       const result = await listingsCollection.find({name:{$regex:search_text,$options:'i'}}).toArray()
+      res.send(result)
+    })
+
+    //orders related apis here
+    app.post('/orders',async(req,res)=>{
+      const newOrders = req.body;
+      const result = await ordersCollection.insertOne(newOrders)
+      res.send(result)
+    })
+
+    //myOrder
+    app.get('/orders',async(req,res)=>{
+      const email = req.query.email;
+      let query = {}
+      if(email){
+        query = {email:email}
+      }
+      const cursor = ordersCollection.find(query)
+      const result = await cursor.toArray()
       res.send(result)
     })
 
