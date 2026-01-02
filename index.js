@@ -55,18 +55,54 @@ async function run() {
         res.send(result)
     })
 
-    //my product
-    app.get('/product',async(req,res)=>{
-      const email = req.query.email;
-      let query = {}
-      if (email){
-        query = {email:email}
-      }
-      const cursor = listingsCollection.find(query);
-      const result = await cursor.toArray()
-      res.send(result)
-    })
+// All products with pagination + category filter
+app.get('/product', async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 9;
+  const category = req.query.category; 
+  const skip = (page - 1) * limit;
 
+  
+  let query = {};
+  if (category) {
+    query.category = category;
+  }
+
+  try {
+  
+    const total = await listingsCollection.countDocuments(query);
+    const products = await listingsCollection
+      .find(query)  
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    res.send({
+      products,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+    });
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    res.status(500).send({ error: "Failed to fetch products" });
+  }
+});
+
+// My Listings 
+app.get('/my-products', async (req, res) => {
+  const email = req.query.email;
+  if (!email) {
+    return res.status(400).send({ error: "Email is required" });
+  }
+
+  try {
+    const products = await listingsCollection.find({ email }).toArray();
+    res.send(products);
+  } catch (error) {
+    res.status(500).send({ error: "Failed to fetch my products" });
+  }
+});
     //update Product
 
     app.patch('/product/:id',async(req,res)=>{
@@ -97,12 +133,7 @@ async function run() {
       res.send(result)
     })
 
-    //get api
-    app.get('/product',async(req,res)=>{
-        const cursor = listingsCollection.find()
-        const result = await cursor.toArray()
-        res.send(result)
-    })
+   
 
     //single listing
     app.get('/product/:id',async(req,res)=>{
@@ -118,6 +149,7 @@ async function run() {
       const result = await cursor.toArray()
       res.send(result)
     })
+
 
     //search listing
     app.get('/search',async(req,res)=>{
@@ -151,7 +183,7 @@ app.get('/api/dashboard-stats', async (req, res) => {
     // stats calculate
     const totalListings = userListings.length;
     const totalOrders = userOrders.length;
-    const pendingOrders = userOrders.filter(order => order.status !== 'completed').length; // যদি status না থাকে তাহলে সব পেন্ডিং ধরো
+    const pendingOrders = userOrders.filter(order => order.status !== 'completed').length; 
     const adoptedPets = userOrders.filter(order => order.category === 'Pets' || order.price === 0).length;
 
     
