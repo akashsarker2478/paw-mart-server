@@ -2,16 +2,16 @@ const express = require('express')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 const cors = require('cors');
-require("dotenv").config()
-const port =process.env.PORT||3000
+// require("dotenv").config()
+const port =process.env.PORT||4000
 
 
 //middleware
 app.use(cors())
 app.use(express.json())
 
-const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.yh13yvx.mongodb.net/?appName=Cluster0`;
-
+const uri = `mongodb+srv://pawDB:sJ09bF4AIhx80mHi@cluster0.yh13yvx.mongodb.net/?appName=Cluster0`;
+console.log(uri)
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -28,7 +28,7 @@ app.get('/', (req, res) => {
 
 async function run() {
   try {
-    await client.connect();
+    //await client.connect();
     const db = client.db('paw_db')
     const listingsCollection = db.collection('product')
     const ordersCollection = db.collection('orders')
@@ -133,6 +133,67 @@ async function run() {
       res.send(result)
     })
 
+    // Dashboard Stats API 
+app.get('/api/dashboard-stats', async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).send({ error: "Email is required" });
+    }
+
+    
+    const userListings = await listingsCollection.find({ email }).toArray();
+
+   
+    const userOrders = await ordersCollection.find({ email }).toArray();
+
+    // stats calculate
+    const totalListings = userListings.length;
+    const totalOrders = userOrders.length;
+    const pendingOrders = userOrders.filter(order => order.status !== 'completed').length; // যদি status না থাকে তাহলে সব পেন্ডিং ধরো
+    const adoptedPets = userOrders.filter(order => order.category === 'Pets' || order.price === 0).length;
+
+    
+    const categoryMap = {};
+    userListings.forEach(listing => {
+      const cat = listing.category || "Others";
+      categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+    });
+
+    const categoryBreakdown = Object.keys(categoryMap).map(name => ({
+      name,
+      value: categoryMap[name]
+    }));
+
+    
+    const recentOrders = userOrders
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 5)
+      .map(order => ({
+        _id: order._id,
+        productName: order.productName || order.productListingName,
+        buyerName: order.buyerName,
+        price: order.price,
+        date: order.date,
+        status: order.status || 'pending'
+      }));
+
+    res.send({
+      totalListings,
+      totalOrders,
+      pendingOrders,
+      adoptedPets,
+      categoryBreakdown,
+      recentOrders
+    });
+
+  } catch (error) {
+    console.error("Dashboard stats error:", error);
+    res.status(500).send({ error: "Failed to fetch dashboard stats" });
+  }
+});
+
     //myOrder
     app.get('/orders',async(req,res)=>{
       const email = req.query.email;
@@ -147,7 +208,7 @@ async function run() {
 
 
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
    
