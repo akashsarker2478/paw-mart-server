@@ -1,8 +1,9 @@
+
+require("dotenv").config()
 const express = require('express')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 const cors = require('cors');
-// require("dotenv").config()
 const port =process.env.PORT||4000
 
 
@@ -10,8 +11,8 @@ const port =process.env.PORT||4000
 app.use(cors())
 app.use(express.json())
 
-const uri = `mongodb+srv://pawDB:sJ09bF4AIhx80mHi@cluster0.yh13yvx.mongodb.net/?appName=Cluster0`;
-console.log(uri)
+const uri = process.env.DB_URI;
+console.log("Connecting to the new MongoDB Cluster...")
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -65,11 +66,11 @@ app.get('/product', async (req, res) => {
   
   let query = {};
   if (category) {
-    query.category = category;
+    query.category = { $regex: category, $options: "i" };
   }
 
   try {
-  
+
     const total = await listingsCollection.countDocuments(query);
     const products = await listingsCollection
       .find(query)  
